@@ -25,10 +25,10 @@ public class Customer {
     @Column(nullable = false)
     private String lastName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
