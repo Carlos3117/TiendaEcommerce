@@ -1,6 +1,6 @@
 package com.example.unimagdalena.TiendaEcommerce.entities;
 
-import com.example.unimagdalena.TiendaEcommerce.Enums.CustomerStatus;
+import com.example.unimagdalena.TiendaEcommerce.enums.CustomerStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
