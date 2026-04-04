@@ -1,4 +1,4 @@
-package com.example.unimagdalena.TiendaEcommerce.Enums;
+package com.example.unimagdalena.TiendaEcommerce.enums;
 
 public enum CustomerStatus {
     ACTIVE,
