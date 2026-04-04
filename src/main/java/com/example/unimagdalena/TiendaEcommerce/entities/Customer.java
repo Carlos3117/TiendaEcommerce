@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Set;
+
 @Getter
 @Setter
 @Entity
@@ -34,4 +36,7 @@ public class Customer {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CustomerStatus status = CustomerStatus.ACTIVE;
+
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
+    private Set<Address> addresses;
 }
