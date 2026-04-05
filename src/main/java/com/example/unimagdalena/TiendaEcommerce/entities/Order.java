@@ -49,8 +49,13 @@ public class Order {
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
-        this.status = OrderStatus.CREATED;
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
+
+        if (this.status == null) {
+            this.status = OrderStatus.CREATED;
+        }
     }
 
 }
