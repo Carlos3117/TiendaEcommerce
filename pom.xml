@@ -60,7 +60,7 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-
+git
 	<build>
 		<plugins>
 			<plugin>
