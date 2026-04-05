@@ -39,4 +39,7 @@ public class Customer {
 
     @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
     private Set<Address> addresses;
+
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
+    private Set<Order> orders;
 }
