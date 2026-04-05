@@ -1,5 +1,6 @@
 package com.example.unimagdalena.TiendaEcommerce.repositories;
 
+import com.example.unimagdalena.TiendaEcommerce.entities.Category;
 import com.example.unimagdalena.TiendaEcommerce.entities.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,4 +23,13 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
             );
+
+    @Query("""
+    SELECT oc, SUM(oi.quantity)
+    FROM OrderItem oi
+    JOIN oi.product op
+    JOIN op.category oc
+    GROUP BY oc
+    ORDER BY SUM(oi.quantity) DESC 
+""") List<Object[]> findTopCategorySellers();
 }
