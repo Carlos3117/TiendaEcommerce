@@ -8,12 +8,15 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long> {
-    // Productos con bajo stock
+    //Productos con bajo stock
+    List<Inventory> findByStockLessThan(Integer stock);
+
+    // • Productos con stock insuficiente respecto al mínimo.
     @Query("""
     SELECT i.product
     FROM Inventory i
     where i.stock < i.minStock 
 """)
-    List<Product> findProductsWithLowStock();
+    List<Product> findProductsWithInsufficientStock();
 
 }
