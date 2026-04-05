@@ -2,6 +2,7 @@ package com.example.unimagdalena.TiendaEcommerce.repositories;
 
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
 import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
+import com.example.unimagdalena.TiendaEcommerce.enums.CustomerStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -10,6 +11,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,6 +19,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Transactional
 @Testcontainers
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=create-drop",
@@ -75,7 +78,7 @@ class OrderItemRepositoryTest {
 
         Customer customer = customerRepository.save(
                 new Customer(null, "Juan", "Perez", "juan@test.com",
-                        "123", null, null, null)
+                        "123", CustomerStatus.ACTIVE, null, null)
         );
 
         Address address = addressRepository.save(
@@ -132,7 +135,7 @@ class OrderItemRepositoryTest {
 
         Customer customer = customerRepository.save(
                 new Customer(null, "Ana", "Lopez", "ana@test.com",
-                        "123", null, null, null)
+                        "123", CustomerStatus.ACTIVE, null, null)
         );
 
         Address address = addressRepository.save(
