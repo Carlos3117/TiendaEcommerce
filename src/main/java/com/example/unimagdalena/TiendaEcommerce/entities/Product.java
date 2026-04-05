@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 @Getter
@@ -29,7 +30,7 @@ public class Product {
     private String sku;
 
     @Column(nullable = false)
-    private Double price;
+    private BigDecimal price;
 
     @Column(nullable = false)
     private Boolean active;
