@@ -3,6 +3,7 @@ package com.example.unimagdalena.TiendaEcommerce.services;
 
 import com.example.unimagdalena.TiendaEcommerce.entities.Category;
 import com.example.unimagdalena.TiendaEcommerce.entities.Product;
+import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ConflictException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
@@ -25,15 +26,16 @@ public class ProductServiceImpl  implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
-
     @Override
     public Product createProduct(Product product) {
+
 
         if (product.getPrice() == null || product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("El precio debe ser mayor que cero");
         }
 
-        if (product.getSku() == null || product.getSku().isEmpty()) {
+
+        if (product.getSku() == null || product.getSku().isBlank()) {
             throw new BusinessException("El SKU es obligatorio");
         }
 
@@ -43,10 +45,16 @@ public class ProductServiceImpl  implements ProductService {
                     throw new ConflictException("El SKU ya existe");
                 });
 
+
+        if (product.getCategory() == null || product.getCategory().getId() == null) {
+            throw new BusinessException("La categoría es obligatoria");
+        }
+
         Category category = categoryRepository.findById(product.getCategory().getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
 
         product.setCategory(category);
+
 
         if (product.getActive() == null) {
             product.setActive(true);
@@ -77,10 +85,12 @@ public class ProductServiceImpl  implements ProductService {
         Product existing = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
+
         if (updatedProduct.getName() != null) {
             existing.setName(updatedProduct.getName());
         }
 
+        // ✅ Precio
         if (updatedProduct.getPrice() != null) {
             if (updatedProduct.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("El precio debe ser mayor que cero");
@@ -88,7 +98,22 @@ public class ProductServiceImpl  implements ProductService {
             existing.setPrice(updatedProduct.getPrice());
         }
 
-        if (updatedProduct.getCategory() != null) {
+
+        if (updatedProduct.getSku() != null && !updatedProduct.getSku().isBlank()) {
+
+            productRepository.findBySku(updatedProduct.getSku())
+                    .ifPresent(p -> {
+                        if (!p.getId().equals(id)) {
+                            throw new ConflictException("El SKU ya existe");
+                        }
+                    });
+
+            existing.setSku(updatedProduct.getSku());
+        }
+
+
+        if (updatedProduct.getCategory() != null && updatedProduct.getCategory().getId() != null) {
+
             Category category = categoryRepository.findById(updatedProduct.getCategory().getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
 
@@ -106,8 +131,18 @@ public class ProductServiceImpl  implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
 
-        if (Boolean.FALSE.equals(active) && product.getOrderItems() != null && !product.getOrderItems().isEmpty()) {
-            throw new BusinessException("No se puede desactivar un producto con pedidos asociados");
+        if (Boolean.FALSE.equals(active)) {
+
+            boolean hasActiveOrders = product.getOrderItems() != null &&
+                    product.getOrderItems().stream()
+                            .anyMatch(item ->
+                                    item.getOrder().getStatus() == OrderStatus.CREATED ||
+                                            item.getOrder().getStatus() == OrderStatus.PAID
+                            );
+
+            if (hasActiveOrders) {
+                throw new BusinessException("No se puede desactivar un producto con pedidos activos");
+            }
         }
 
         product.setActive(active);

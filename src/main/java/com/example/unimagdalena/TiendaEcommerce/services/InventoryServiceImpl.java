@@ -1,13 +1,11 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-
 import com.example.unimagdalena.TiendaEcommerce.entities.Inventory;
 import com.example.unimagdalena.TiendaEcommerce.entities.Product;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
 import com.example.unimagdalena.TiendaEcommerce.repositories.InventoryRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.ProductRepository;
-import com.example.unimagdalena.TiendaEcommerce.services.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,13 +15,11 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-
-public class InventoryServiceImpl implements InventoryService  {
+public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
 
-   
 
     @Override
     public Inventory updateInventory(Long productId, Integer stock, Integer minStock) {
@@ -45,6 +41,9 @@ public class InventoryServiceImpl implements InventoryService  {
         if (inventory == null) {
             inventory = new Inventory();
             inventory.setProduct(product);
+
+
+            product.setInventory(inventory);
         }
 
         inventory.setStock(stock);
@@ -75,6 +74,7 @@ public class InventoryServiceImpl implements InventoryService  {
     @Transactional(readOnly = true)
     public List<Inventory> getLowStockProducts() {
 
-        return inventoryRepository.findByStockLessThan(5);
+
+        return inventoryRepository.findLowStockProducts();
     }
 }

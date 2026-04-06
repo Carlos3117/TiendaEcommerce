@@ -20,7 +20,7 @@ public class AddressServiceImpl implements AddressService {
     private final AddressRepository addressRepository;
     private final CustomerRepository customerRepository;
 
-    // 🔻 CREATE
+
     @Override
     public Address createAddress(Address address) {
 
@@ -44,7 +44,6 @@ public class AddressServiceImpl implements AddressService {
         return addressRepository.save(address);
     }
 
-    // 🔻 GET BY ID
     @Override
     @Transactional(readOnly = true)
     public Address getAddressById(Long id) {
@@ -52,7 +51,7 @@ public class AddressServiceImpl implements AddressService {
                 .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada"));
     }
 
-    // 🔻 GET BY CUSTOMER
+
     @Override
     @Transactional(readOnly = true)
     public List<Address> getAddressesByCustomer(Long customerId) {
@@ -63,7 +62,7 @@ public class AddressServiceImpl implements AddressService {
         return addressRepository.findByCustomer(customer);
     }
 
-    // 🔻 UPDATE
+
     @Override
     public Address updateAddress(Long id, Address updated) {
 
@@ -81,7 +80,7 @@ public class AddressServiceImpl implements AddressService {
         return addressRepository.save(existing);
     }
 
-    // 🔻 DELETE
+
     @Override
     public void deleteAddress(Long id) {
 

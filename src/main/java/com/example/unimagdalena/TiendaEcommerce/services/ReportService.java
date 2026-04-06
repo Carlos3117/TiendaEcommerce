@@ -4,15 +4,12 @@ import com.example.unimagdalena.TiendaEcommerce.entities.Order;
 import com.example.unimagdalena.TiendaEcommerce.entities.Product;
 
 import java.math.BigDecimal;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface ReportService  {
-
+public interface ReportService {
 
     List<Product> getLowStockProducts();
-
 
     List<Order> getOrdersByFilters(Long customerId,
                                    String status,
@@ -20,7 +17,6 @@ public interface ReportService  {
                                    LocalDateTime endDate,
                                    BigDecimal minTotal,
                                    BigDecimal maxTotal);
-
 
     List<Object[]> getTopSellingProducts(LocalDateTime startDate, LocalDateTime endDate);
 

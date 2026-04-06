@@ -7,7 +7,6 @@ import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundExcep
 import com.example.unimagdalena.TiendaEcommerce.repositories.InventoryRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.OrderRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.OrderStatusHistoryRepository;
-import com.example.unimagdalena.TiendaEcommerce.services.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,22 +14,27 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 @Transactional
-
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final InventoryRepository inventoryRepository;
     private final OrderStatusHistoryRepository historyRepository;
 
-
     @Override
     public Order createOrder() {
-        // Implementación real requiere DTOs (CreateOrderRequest)
-        throw new UnsupportedOperationException("createOrder no implementado aún");
+
+        Order order = new Order();
+        order.setStatus(OrderStatus.CREATED);
+        order.setTotal(BigDecimal.ZERO);
+
+        Order saved = orderRepository.save(order);
+
+        saveHistory(saved, OrderStatus.CREATED);
+
+        return saved;
     }
 
 
@@ -39,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     public Order getOrderById(Long id) {
         return getOrderOrThrow(id);
     }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -49,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void payOrder(Long orderId) {
+
         Order order = getOrderOrThrow(orderId);
 
         if (order.getStatus() != OrderStatus.CREATED) {
@@ -61,6 +67,15 @@ public class OrderServiceImpl implements OrderService {
 
 
         for (OrderItem item : order.getItems()) {
+
+            if (item.getProduct() == null) {
+                throw new BusinessException("Ítem sin producto asociado");
+            }
+
+            if (!item.getProduct().getActive()) {
+                throw new BusinessException("Producto inactivo: " + item.getProduct().getName());
+            }
+
             Inventory inventory = item.getProduct().getInventory();
 
             if (inventory == null) {
@@ -72,11 +87,17 @@ public class OrderServiceImpl implements OrderService {
             }
 
             if (inventory.getStock() < item.getQuantity()) {
-                throw new BusinessException("Stock insuficiente para el producto: " +
-                        item.getProduct().getName());
+                throw new BusinessException(
+                        "Stock insuficiente para el producto: " + item.getProduct().getName()
+                );
+            }
+
+            if (inventory.getStock() - item.getQuantity() < inventory.getMinStock()) {
+                throw new BusinessException(
+                        "El pedido deja el stock por debajo del mínimo: " + item.getProduct().getName()
+                );
             }
         }
-
 
         for (OrderItem item : order.getItems()) {
             Inventory inventory = item.getProduct().getInventory();
@@ -85,38 +106,37 @@ public class OrderServiceImpl implements OrderService {
         }
 
 
-        order.setStatus(OrderStatus.PAID);
-
-
         BigDecimal total = BigDecimal.ZERO;
+
         for (OrderItem item : order.getItems()) {
-            if (item.getUnitPrice() == null) {
-                item.setUnitPrice(item.getProduct().getPrice());
-            }
-            if (item.getSubtotal() == null) {
-                item.setSubtotal(item.getUnitPrice()
-                        .multiply(BigDecimal.valueOf(item.getQuantity())));
-            }
-            total = total.add(item.getSubtotal());
+
+            BigDecimal unitPrice = item.getProduct().getPrice();
+            item.setUnitPrice(unitPrice);
+
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            item.setSubtotal(subtotal);
+
+            total = total.add(subtotal);
         }
+
         order.setTotal(total);
 
+
+        order.setStatus(OrderStatus.PAID);
+
         orderRepository.save(order);
+
         saveHistory(order, OrderStatus.PAID);
     }
 
 
     @Override
     public void shipOrder(Long orderId) {
-        Order order = getOrderOrThrow(orderId);
 
+        Order order = getOrderOrThrow(orderId);
 
         if (order.getStatus() != OrderStatus.PAID) {
             throw new BusinessException("Solo pedidos en estado PAID pueden enviarse");
-        }
-
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new BusinessException("No se puede enviar un pedido cancelado");
         }
 
         order.setStatus(OrderStatus.SHIPPED);
@@ -127,8 +147,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void deliverOrder(Long orderId) {
-        Order order = getOrderOrThrow(orderId);
 
+        Order order = getOrderOrThrow(orderId);
 
         if (order.getStatus() != OrderStatus.SHIPPED) {
             throw new BusinessException("Solo pedidos enviados pueden marcarse como entregados");
@@ -143,22 +163,28 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void cancelOrder(Long orderId) {
+
         Order order = getOrderOrThrow(orderId);
 
         switch (order.getStatus()) {
 
             case CREATED:
-
                 order.setStatus(OrderStatus.CANCELLED);
                 break;
 
             case PAID:
 
-                for (OrderItem item : order.getItems()) {
-                    Inventory inventory = item.getProduct().getInventory();
-                    inventory.setStock(inventory.getStock() + item.getQuantity());
-                    inventoryRepository.save(inventory);
+                if (order.getItems() != null) {
+                    for (OrderItem item : order.getItems()) {
+                        Inventory inventory = item.getProduct().getInventory();
+
+                        if (inventory != null) {
+                            inventory.setStock(inventory.getStock() + item.getQuantity());
+                            inventoryRepository.save(inventory);
+                        }
+                    }
                 }
+
                 order.setStatus(OrderStatus.CANCELLED);
                 break;
 
@@ -173,6 +199,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         orderRepository.save(order);
+
         saveHistory(order, OrderStatus.CANCELLED);
     }
 
@@ -181,6 +208,7 @@ public class OrderServiceImpl implements OrderService {
         return orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     }
+
 
     private void saveHistory(Order order, OrderStatus status) {
         OrderStatusHistory history = new OrderStatusHistory();
