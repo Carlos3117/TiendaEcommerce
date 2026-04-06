@@ -31,11 +31,11 @@ public class OrderServiceImpl implements OrderService {
     public Order createOrder(Long customerId, Long addressId, List<OrderItem> items) {
 
         if (customerId == null) {
-            throw new NullPointerException("El cliente es obligatorio");
+            throw new ValidationException("El cliente es obligatorio");
         }
 
         if (addressId == null) {
-            throw new NullPointerException("La dirección es obligatoria");
+            throw new ValidationException("La dirección es obligatoria");
         }
 
         if (items == null || items.isEmpty()) {
@@ -162,12 +162,6 @@ public class OrderServiceImpl implements OrderService {
                         "Stock insuficiente para el producto: " + item.getProduct().getName()
                 );
             }
-
-            if (inventory.getStock() - item.getQuantity() < inventory.getMinStock()) {
-                throw new BusinessException(
-                        "El pedido deja el stock por debajo del mínimo: " + item.getProduct().getName()
-                );
-            }
         }
 
         for (OrderItem item : order.getItems()) {
@@ -245,15 +239,14 @@ public class OrderServiceImpl implements OrderService {
 
             case PAID:
 
-                if (order.getItems() != null) {
-                    for (OrderItem item : order.getItems()) {
-                        Inventory inventory = item.getProduct().getInventory();
+                for (OrderItem item : order.getItems()) {
 
-                        if (inventory != null) {
-                            inventory.setStock(inventory.getStock() + item.getQuantity());
-                            inventoryRepository.save(inventory);
-                        }
+                    if (item.getProduct() == null || item.getProduct().getInventory() == null) {
+                        throw new BusinessException("Producto sin inventario asociado");
                     }
+                    Inventory inventory = item.getProduct().getInventory();
+                    inventory.setStock(inventory.getStock() + item.getQuantity());
+                    inventoryRepository.save(inventory);
                 }
 
                 order.setStatus(OrderStatus.CANCELLED);
