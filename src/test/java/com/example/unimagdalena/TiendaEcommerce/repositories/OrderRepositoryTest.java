@@ -214,4 +214,45 @@ class OrderRepositoryTest {
         assertEquals(1, result.size());
         assertEquals(recentOrder.getId(), result.get(0).getId());
     }
+
+    @Test
+    void shouldFilterByAllParametersCombined() {
+
+        Customer customer = customerRepository.save(
+                new Customer(null, "Test", "User", "test2@test.com",
+                        "123", CustomerStatus.ACTIVE, null, null)
+        );
+
+        Address address = addressRepository.save(
+                new Address(null, "Street", "City", customer)
+        );
+
+        Order order1 = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.PAID,
+                        new BigDecimal("300"),
+                        LocalDateTime.now().minusDays(2),
+                        null, null)
+        );
+
+        orderRepository.save(
+                new Order(null, customer, address, OrderStatus.CREATED,
+                        new BigDecimal("100"),
+                        LocalDateTime.now().minusDays(10),
+                        null, null)
+        );
+
+        orderRepository.flush();
+
+        List<Order> result = orderRepository.findOrdersWithFilters(
+                customer.getId(),
+                OrderStatus.PAID,
+                LocalDateTime.now().minusDays(5),
+                LocalDateTime.now().plusDays(1),
+                new BigDecimal("200"),
+                new BigDecimal("400")
+        );
+
+        assertEquals(1, result.size());
+        assertEquals(order1.getId(), result.get(0).getId());
+    }
 }
