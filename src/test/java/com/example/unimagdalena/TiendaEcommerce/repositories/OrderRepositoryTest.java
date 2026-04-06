@@ -173,4 +173,45 @@ class OrderRepositoryTest {
         Customer topCustomer = (Customer) result.get(0)[0];
         assertEquals(customer1.getId(), topCustomer.getId());
     }
+
+    @Test
+    void shouldFilterByDateRangeAndMaxTotal() {
+
+        Customer customer = customerRepository.save(
+                new Customer(null, "Test", "User", "test@test.com",
+                        "123", CustomerStatus.ACTIVE, null, null)
+        );
+
+        Address address = addressRepository.save(
+                new Address(null, "Street", "City", customer)
+        );
+
+        Order oldOrder = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.PAID,
+                        new BigDecimal("100"),
+                        LocalDateTime.now().minusDays(10),
+                        null, null)
+        );
+
+        Order recentOrder = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.PAID,
+                        new BigDecimal("300"),
+                        LocalDateTime.now(),
+                        null, null)
+        );
+
+        orderRepository.flush();
+
+        List<Order> result = orderRepository.findOrdersWithFilters(
+                customer.getId(),
+                null,
+                LocalDateTime.now().minusDays(5),
+                LocalDateTime.now().plusDays(1),
+                null,
+                new BigDecimal("400")
+        );
+
+        assertEquals(1, result.size());
+        assertEquals(recentOrder.getId(), result.get(0).getId());
+    }
 }

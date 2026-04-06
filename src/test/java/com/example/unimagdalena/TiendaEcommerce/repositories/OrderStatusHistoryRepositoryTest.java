@@ -94,4 +94,70 @@ class OrderStatusHistoryRepositoryTest {
         assertEquals(OrderStatus.PAID, result.get(1).getStatus());
         assertEquals(OrderStatus.SHIPPED, result.get(2).getStatus());
     }
+    @Test
+    void shouldReturnOnlyHistoryOfGivenOrder() {
+
+        Customer customer = customerRepository.save(
+                new Customer(null, "Multi", "Test", "multi@test.com",
+                        "123", CustomerStatus.ACTIVE, null, null)
+        );
+
+        Address address = addressRepository.save(
+                new Address(null, "Street", "City", customer)
+        );
+
+        Order order1 = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.CREATED,
+                        new BigDecimal("100"),
+                        LocalDateTime.now(),
+                        null, null)
+        );
+
+        Order order2 = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.CREATED,
+                        new BigDecimal("200"),
+                        LocalDateTime.now(),
+                        null, null)
+        );
+
+        historyRepository.save(
+                new OrderStatusHistory(null, OrderStatus.CREATED,
+                        LocalDateTime.now(), order1)
+        );
+
+        historyRepository.save(
+                new OrderStatusHistory(null, OrderStatus.PAID,
+                        LocalDateTime.now(), order2)
+        );
+
+        List<OrderStatusHistory> result =
+                historyRepository.findHistorialByOrder(order1);
+
+        assertEquals(1, result.size());
+        assertEquals(order1.getId(), result.get(0).getOrder().getId());
+    }
+    @Test
+    void shouldReturnEmptyListWhenOrderHasNoHistory() {
+
+        Customer customer = customerRepository.save(
+                new Customer(null, "Test", "User", "test@test.com",
+                        "123", CustomerStatus.ACTIVE, null, null)
+        );
+
+        Address address = addressRepository.save(
+                new Address(null, "Street", "City", customer)
+        );
+
+        Order order = orderRepository.save(
+                new Order(null, customer, address, OrderStatus.CREATED,
+                        new BigDecimal("100"),
+                        LocalDateTime.now(),
+                        null, null)
+        );
+
+        List<OrderStatusHistory> result =
+                historyRepository.findHistorialByOrder(order);
+
+        assertTrue(result.isEmpty());
+    }
 }

@@ -79,6 +79,7 @@ class InventoryRepositoryTest {
         assertEquals("Mouse", result.get(0).getProduct().getName());
     }
 
+
     @Test
     void shouldFindProductsWithInsufficientStock() {
 
@@ -109,5 +110,37 @@ class InventoryRepositoryTest {
 
         assertEquals(1, result.size());
         assertEquals("Headphones", result.get(0).getName());
+    }
+    @Test
+    void shouldFindLowStockProducts() {
+
+        Category category = categoryRepository.save(
+                new Category(null, "Tech", null)
+        );
+
+        Product product1 = productRepository.save(
+                new Product(null, "Mouse", "SKU1",
+                        new BigDecimal("50"), true, category, null, null)
+        );
+
+        Product product2 = productRepository.save(
+                new Product(null, "Keyboard", "SKU2",
+                        new BigDecimal("80"), true, category, null, null)
+        );
+
+        inventoryRepository.save(
+                new Inventory(null, 5, 10, product1) // bajo stock
+        );
+
+        inventoryRepository.save(
+                new Inventory(null, 20, 10, product2) // ok
+        );
+
+        inventoryRepository.flush();
+
+        List<Inventory> result = inventoryRepository.findLowStockProducts();
+
+        assertEquals(1, result.size());
+        assertEquals(product1.getId(), result.get(0).getProduct().getId());
     }
 }

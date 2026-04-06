@@ -111,4 +111,27 @@ class ProductRepositoryTest {
         assertEquals(1, products.size());
         assertEquals("Book 1", products.get(0).getName());
     }
+    @Test
+    void shouldFindProductsByCategory() {
+
+        Category category = categoryRepository.save(
+                new Category(null, "Tech", null)
+        );
+
+        productRepository.save(
+                new Product(null, "Laptop", "SKU1",
+                        new BigDecimal("1000"), true, category, null, null)
+        );
+
+        productRepository.save(
+                new Product(null, "Phone", "SKU2",
+                        new BigDecimal("500"), false, category, null, null)
+        );
+
+        productRepository.flush();
+
+        List<Product> result = productRepository.findByCategory(category);
+
+        assertEquals(2, result.size());
+    }
 }
