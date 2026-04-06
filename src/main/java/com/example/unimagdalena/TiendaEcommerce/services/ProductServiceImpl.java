@@ -90,7 +90,6 @@ public class ProductServiceImpl  implements ProductService {
             existing.setName(updatedProduct.getName());
         }
 
-        // ✅ Precio
         if (updatedProduct.getPrice() != null) {
             if (updatedProduct.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("El precio debe ser mayor que cero");
