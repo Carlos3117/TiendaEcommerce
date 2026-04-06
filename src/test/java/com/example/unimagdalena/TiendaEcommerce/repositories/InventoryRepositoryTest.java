@@ -66,11 +66,11 @@ class InventoryRepositoryTest {
         );
 
         inventoryRepository.save(
-                new Inventory(null, 2, 5, product1) // bajo stock
+                new Inventory(null, 2, 5, product1)
         );
 
         inventoryRepository.save(
-                new Inventory(null, 10, 5, product2) // suficiente
+                new Inventory(null, 10, 5, product2)
         );
 
         List<Inventory> result = inventoryRepository.findByStockLessThan(5);
@@ -129,11 +129,11 @@ class InventoryRepositoryTest {
         );
 
         inventoryRepository.save(
-                new Inventory(null, 5, 10, product1) // bajo stock
+                new Inventory(null, 5, 10, product1)
         );
 
         inventoryRepository.save(
-                new Inventory(null, 20, 10, product2) // ok
+                new Inventory(null, 20, 10, product2)
         );
 
         inventoryRepository.flush();
