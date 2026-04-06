@@ -43,7 +43,7 @@ class OrderServiceImplTest {
         );
     }
 
-    // No debe permitir cantidades inválidas (0 o negativas)
+    // No debe permitir cantidades inválidas o negativas
     @ParameterizedTest
     @ValueSource(ints = {0, -1, -10})
     void shouldNotCreateOrderWithInvalidQuantity(int quantity) {
