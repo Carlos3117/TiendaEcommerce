@@ -71,6 +71,13 @@ class ProductRepositoryTest {
         assertTrue(found.isPresent());
         assertEquals("Laptop", found.get().getName());
     }
+    @Test
+    void shouldReturnEmptyWhenSkuNotFound() {
+
+        Optional<Product> result = productRepository.findBySku("NO_EXISTE");
+
+        assertTrue(result.isEmpty());
+    }
 
     @Test
     void shouldFindActiveProductsByCategory() {
