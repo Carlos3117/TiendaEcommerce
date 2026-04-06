@@ -76,7 +76,7 @@ class OrderRepositoryTest {
                         null, null)
         );
 
-        // 🔥 Fuerza sincronización con BD antes de consultar
+
         orderRepository.flush();
 
         List<Order> result = orderRepository.findOrdersWithFilters(
