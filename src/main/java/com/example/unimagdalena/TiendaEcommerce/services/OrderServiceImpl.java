@@ -1,17 +1,18 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
+import com.example.unimagdalena.TiendaEcommerce.enums.CustomerStatus;
 import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
-import com.example.unimagdalena.TiendaEcommerce.repositories.InventoryRepository;
-import com.example.unimagdalena.TiendaEcommerce.repositories.OrderRepository;
-import com.example.unimagdalena.TiendaEcommerce.repositories.OrderStatusHistoryRepository;
+import com.example.unimagdalena.TiendaEcommerce.exceptions.ValidationException;
+import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,19 +23,89 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final InventoryRepository inventoryRepository;
     private final OrderStatusHistoryRepository historyRepository;
+    private final CustomerRepository customerRepository;
+    private final AddressRepository addressRepository;
+    private final ProductRepository productRepository;
 
     @Override
-    public Order createOrder() {
+    public Order createOrder(Long customerId, Long addressId, List<OrderItem> items) {
+
+        if (customerId == null) {
+            throw new NullPointerException("El cliente es obligatorio");
+        }
+
+        if (addressId == null) {
+            throw new NullPointerException("La dirección es obligatoria");
+        }
+
+        if (items == null || items.isEmpty()) {
+            throw new BusinessException("El pedido debe contener al menos un ítem");
+        }
+
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
+
+        if (customer.getStatus() != CustomerStatus.ACTIVE) {
+            throw new BusinessException("El cliente no está activo");
+        }
+
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada"));
+
+        if (!address.getCustomer().getId().equals(customer.getId())) {
+            throw new BusinessException("La dirección no pertenece al cliente");
+        }
 
         Order order = new Order();
+        order.setCustomer(customer);
+        order.setAddress(address);
         order.setStatus(OrderStatus.CREATED);
-        order.setTotal(BigDecimal.ZERO);
 
-        Order saved = orderRepository.save(order);
+        BigDecimal total = BigDecimal.ZERO;
+        List<OrderItem> orderItems = new ArrayList<>();
 
-        saveHistory(saved, OrderStatus.CREATED);
+        for (OrderItem item : items) {
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                throw new ValidationException("Cantidad inválida");
+            }
 
-        return saved;
+            if (item.getProduct() == null || item.getProduct().getId() == null) {
+                throw new ValidationException("El producto es obligatorio");
+            }
+
+            Product product = productRepository.findById(item.getProduct().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+
+            if (!product.getActive()) {
+                throw new BusinessException("Producto inactivo: " + product.getName());
+            }
+
+            if (product.getPrice() == null || product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("Producto con precio inválido: " + product.getName());
+            }
+
+            BigDecimal unitPrice = product.getPrice();
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+
+            OrderItem newItem = new OrderItem();
+            newItem.setOrder(order);
+            newItem.setProduct(product);
+            newItem.setQuantity(item.getQuantity());
+            newItem.setUnitPrice(unitPrice);
+            newItem.setSubtotal(subtotal);
+
+            total = total.add(subtotal);
+            orderItems.add(newItem);
+        }
+
+        order.setItems(orderItems);
+        order.setTotal(total);
+
+        Order savedOrder = orderRepository.save(order);
+
+        saveHistory(savedOrder, OrderStatus.CREATED);
+
+        return savedOrder;
     }
 
 
