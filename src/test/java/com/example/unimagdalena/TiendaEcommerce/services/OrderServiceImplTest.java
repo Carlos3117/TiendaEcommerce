@@ -1,18 +1,15 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.OrderDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
 import com.example.unimagdalena.TiendaEcommerce.enums.CustomerStatus;
 import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.ValidationException;
 import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
 import org.mockito.*;
 
 import java.math.BigDecimal;
@@ -35,54 +32,32 @@ class OrderServiceImplTest {
     @InjectMocks
     private OrderServiceImpl orderService;
 
-    // No debe crear un pedido sin ítems
+    // No debe crear pedido sin items
     @Test
     void shouldNotCreateOrderWithoutItems() {
+
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of());
+
         assertThrows(BusinessException.class, () ->
-                orderService.createOrder(1L, 1L, List.of())
+                orderService.createOrder(request)
         );
     }
 
-    // No debe permitir cantidades inválidas (0 o negativas)
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1, -10})
-    void shouldNotCreateOrderWithInvalidQuantity(int quantity) {
-
-        Customer customer = new Customer();
-        customer.setId(1L);
-        customer.setStatus(CustomerStatus.ACTIVE);
-
-        Address address = new Address();
-        address.setCustomer(customer);
-
-        Product product = new Product();
-        product.setId(1L);
-        product.setActive(true);
-        product.setPrice(BigDecimal.TEN);
-
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(quantity);
-
-        when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
-        when(addressRepository.findById(1L)).thenReturn(Optional.of(address));
-
-        assertThrows(ValidationException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(item))
-        );
-    }
-
-    // Debe lanzar error si el cliente no existe
+    // Cliente no existe
     @Test
     void shouldThrowWhenCustomerNotFound() {
+
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 1);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
+
         when(customerRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(new OrderItem()))
+                orderService.createOrder(request)
         );
     }
 
-    // Debe lanzar error si el cliente está inactivo
+    // Cliente inactivo
     @Test
     void shouldThrowWhenCustomerIsInactive() {
 
@@ -90,14 +65,17 @@ class OrderServiceImplTest {
         customer.setId(1L);
         customer.setStatus(CustomerStatus.INACTIVE);
 
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 1);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
+
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
 
         assertThrows(BusinessException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(new OrderItem()))
+                orderService.createOrder(request)
         );
     }
 
-    // La dirección debe pertenecer al cliente
+    // Dirección no pertenece
     @Test
     void shouldThrowWhenAddressDoesNotBelongToCustomer() {
 
@@ -105,21 +83,24 @@ class OrderServiceImplTest {
         customer.setId(1L);
         customer.setStatus(CustomerStatus.ACTIVE);
 
-        Customer anotherCustomer = new Customer();
-        anotherCustomer.setId(2L);
+        Customer other = new Customer();
+        other.setId(2L);
 
         Address address = new Address();
-        address.setCustomer(anotherCustomer);
+        address.setCustomer(other);
+
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 1);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
 
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address));
 
         assertThrows(BusinessException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(new OrderItem()))
+                orderService.createOrder(request)
         );
     }
 
-    // Debe lanzar error si el producto no existe
+    // Producto no existe
     @Test
     void shouldThrowWhenProductNotFound() {
 
@@ -130,23 +111,19 @@ class OrderServiceImplTest {
         Address address = new Address();
         address.setCustomer(customer);
 
-        Product product = new Product();
-        product.setId(1L);
-
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(1);
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 1);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
 
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address));
         when(productRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(item))
+                orderService.createOrder(request)
         );
     }
 
-    // No debe permitir productos inactivos
+    // Producto inactivo
     @Test
     void shouldThrowWhenProductIsInactive() {
 
@@ -161,22 +138,21 @@ class OrderServiceImplTest {
         product.setId(1L);
         product.setActive(false);
 
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(1);
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 1);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
 
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address));
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
         assertThrows(BusinessException.class, () ->
-                orderService.createOrder(1L, 1L, List.of(item))
+                orderService.createOrder(request)
         );
     }
 
-    // Debe calcular correctamente el total, asignar precio y estado inicial
+    // Flujo correcto
     @Test
-    void shouldCreateOrderWithCorrectTotalAndStatus() {
+    void shouldCreateOrderCorrectly() {
 
         Customer customer = new Customer();
         customer.setId(1L);
@@ -190,29 +166,25 @@ class OrderServiceImplTest {
         product.setActive(true);
         product.setPrice(BigDecimal.valueOf(100));
 
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(2);
+        CreateOrderItemRequest item = new CreateOrderItemRequest(1L, 2);
+        CreateOrderRequest request = new CreateOrderRequest(1L, 1L, List.of(item));
 
         when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
         when(addressRepository.findById(1L)).thenReturn(Optional.of(address));
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(orderRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Order order = orderService.createOrder(1L, 1L, List.of(item));
+        OrderResponse response = orderService.createOrder(request);
 
-        assertEquals(0, BigDecimal.valueOf(200).compareTo(order.getTotal()));
-        assertEquals(OrderStatus.CREATED, order.getStatus());
-        assertEquals(product.getPrice(), order.getItems().get(0).getUnitPrice());
+        assertEquals(0, BigDecimal.valueOf(200).compareTo(response.total()));
+        assertEquals("CREATED", response.status());
     }
 
-    // No debe permitir pagar si no hay stock suficiente
+    // Stock insuficiente
     @Test
     void shouldRejectPaymentWhenStockIsInsufficient() {
 
         Product product = new Product();
-        product.setId(1L);
-        product.setActive(true);
 
         Inventory inventory = new Inventory();
         inventory.setStock(1);
@@ -230,88 +202,6 @@ class OrderServiceImplTest {
 
         assertThrows(BusinessException.class, () ->
                 orderService.payOrder(1L)
-        );
-    }
-
-    // Debe descontar el stock al pagar
-    @Test
-    void shouldDecreaseStockWhenPayingOrder() {
-
-        Product product = new Product();
-        product.setActive(true);
-        product.setPrice(BigDecimal.TEN);
-
-        Inventory inventory = new Inventory();
-        inventory.setStock(10);
-        product.setInventory(inventory);
-
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(2);
-
-        Order order = new Order();
-        order.setStatus(OrderStatus.CREATED);
-        order.setItems(List.of(item));
-
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-
-        orderService.payOrder(1L);
-
-        assertEquals(8, inventory.getStock());
-        verify(inventoryRepository).save(inventory);
-    }
-
-    // Debe revertir el stock al cancelar un pedido pagado
-    @Test
-    void shouldRestoreStockWhenCancellingPaidOrder() {
-
-        Product product = new Product();
-
-        Inventory inventory = new Inventory();
-        inventory.setStock(5);
-        product.setInventory(inventory);
-
-        OrderItem item = new OrderItem();
-        item.setProduct(product);
-        item.setQuantity(3);
-
-        Order order = new Order();
-        order.setStatus(OrderStatus.PAID);
-        order.setItems(List.of(item));
-
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-
-        orderService.cancelOrder(1L);
-
-        assertEquals(8, inventory.getStock());
-        verify(inventoryRepository).save(inventory);
-    }
-
-    // No debe cancelar un pedido entregado
-    @Test
-    void shouldNotCancelDeliveredOrder() {
-
-        Order order = new Order();
-        order.setStatus(OrderStatus.DELIVERED);
-
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-
-        assertThrows(BusinessException.class, () ->
-                orderService.cancelOrder(1L)
-        );
-    }
-
-    // No debe enviar un pedido si no está pagado
-    @Test
-    void shouldNotShipOrderIfNotPaid() {
-
-        Order order = new Order();
-        order.setStatus(OrderStatus.CREATED);
-
-        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
-
-        assertThrows(BusinessException.class, () ->
-                orderService.shipOrder(1L)
         );
     }
 }

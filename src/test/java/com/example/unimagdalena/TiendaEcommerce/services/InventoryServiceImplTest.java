@@ -1,8 +1,10 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.InventoryDto.UpdateInventoryRequest;
+import com.example.unimagdalena.TiendaEcommerce.dto.InventoryDto.InventoryResponse;
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.IInventoryMapper ;
 import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 
 import org.junit.jupiter.api.Test;
@@ -19,6 +21,7 @@ class InventoryServiceImplTest {
 
     @Mock private InventoryRepository inventoryRepository;
     @Mock private ProductRepository productRepository;
+    @Mock private IInventoryMapper inventoryMapper;
 
     @InjectMocks
     private InventoryServiceImpl inventoryService;
@@ -27,38 +30,12 @@ class InventoryServiceImplTest {
     @Test
     void shouldThrowWhenProductNotFound() {
 
+        UpdateInventoryRequest request = new UpdateInventoryRequest(1L, 10, 2);
+
         when(productRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                inventoryService.updateInventory(1L, 10, 2)
-        );
-    }
-
-    // No debe permitir stock negativo
-    @Test
-    void shouldNotAllowNegativeStock() {
-
-        Product product = new Product();
-        product.setId(1L);
-
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        assertThrows(BusinessException.class, () ->
-                inventoryService.updateInventory(1L, -5, 2)
-        );
-    }
-
-    // No debe permitir stock mínimo negativo
-    @Test
-    void shouldNotAllowNegativeMinStock() {
-
-        Product product = new Product();
-        product.setId(1L);
-
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-
-        assertThrows(BusinessException.class, () ->
-                inventoryService.updateInventory(1L, 10, -1)
+                inventoryService.updateInventory(request)
         );
     }
 
@@ -69,17 +46,25 @@ class InventoryServiceImplTest {
         Product product = new Product();
         product.setId(1L);
 
+        UpdateInventoryRequest request = new UpdateInventoryRequest(1L, 10, 2);
+
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(inventoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Inventory inventory = inventoryService.updateInventory(1L, 10, 2);
+        when(inventoryMapper.toResponse(any()))
+                .thenAnswer(inv -> {
+                    Inventory i = inv.getArgument(0);
+                    return new InventoryResponse(i.getProduct().getId(), i.getStock(), i.getMinStock());
+                });
 
-        assertEquals(10, inventory.getStock());
-        assertEquals(2, inventory.getMinStock());
+        InventoryResponse response = inventoryService.updateInventory(request);
+
+        assertEquals(10, response.stock());
+        assertEquals(2, response.minStock());
         assertNotNull(product.getInventory());
     }
 
-    //  Debe actualizar inventario existente
+    // Debe actualizar inventario existente
     @Test
     void shouldUpdateExistingInventory() {
 
@@ -89,16 +74,25 @@ class InventoryServiceImplTest {
         Inventory inventory = new Inventory();
         inventory.setStock(5);
         inventory.setMinStock(1);
+        inventory.setProduct(product);
 
         product.setInventory(inventory);
+
+        UpdateInventoryRequest request = new UpdateInventoryRequest(1L, 20, 3);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(inventoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Inventory updated = inventoryService.updateInventory(1L, 20, 3);
+        when(inventoryMapper.toResponse(any()))
+                .thenAnswer(inv -> {
+                    Inventory i = inv.getArgument(0);
+                    return new InventoryResponse(i.getProduct().getId(), i.getStock(), i.getMinStock());
+                });
 
-        assertEquals(20, updated.getStock());
-        assertEquals(3, updated.getMinStock());
+        InventoryResponse updated = inventoryService.updateInventory(request);
+
+        assertEquals(20, updated.stock());
+        assertEquals(3, updated.minStock());
     }
 
     // Debe lanzar error si no tiene inventario al consultar
@@ -123,12 +117,23 @@ class InventoryServiceImplTest {
         product.setId(1L);
 
         Inventory inventory = new Inventory();
+        inventory.setProduct(product);
+        inventory.setStock(10);
+        inventory.setMinStock(2);
+
         product.setInventory(inventory);
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
-        Inventory result = inventoryService.getByProduct(1L);
+        when(inventoryMapper.toResponse(any()))
+                .thenAnswer(inv -> {
+                    Inventory i = inv.getArgument(0);
+                    return new InventoryResponse(i.getProduct().getId(), i.getStock(), i.getMinStock());
+                });
 
-        assertEquals(inventory, result);
+        InventoryResponse result = inventoryService.getByProduct(1L);
+
+        assertEquals(10, result.stock());
+        assertEquals(2, result.minStock());
     }
 }

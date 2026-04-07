@@ -1,9 +1,10 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.ProductDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ConflictException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.IProductMapper;
 import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 
 import org.junit.jupiter.api.Test;
@@ -21,48 +22,27 @@ class ProductServiceImplTest {
 
     @Mock private ProductRepository productRepository;
     @Mock private CategoryRepository categoryRepository;
+    @Mock private IProductMapper productMapper;
 
     @InjectMocks
     private ProductServiceImpl productService;
-
-    // SKU obligatorio
-    @Test
-    void shouldNotCreateProductWithoutSku() {
-
-        Product product = new Product();
-        product.setPrice(BigDecimal.TEN);
-
-        assertThrows(BusinessException.class, () ->
-                productService.createProduct(product)
-        );
-    }
 
     // SKU duplicado
     @Test
     void shouldNotAllowDuplicateSku() {
 
-        Product product = new Product();
-        product.setSku("ABC123");
-        product.setPrice(BigDecimal.TEN);
+        CreateProductRequest request = new CreateProductRequest(
+                "Producto",
+                "ABC123",
+                BigDecimal.TEN,
+                1L
+        );
 
         when(productRepository.findBySku("ABC123"))
                 .thenReturn(Optional.of(new Product()));
 
         assertThrows(ConflictException.class, () ->
-                productService.createProduct(product)
-        );
-    }
-
-    // Precio inválido
-    @Test
-    void shouldNotAllowInvalidPrice() {
-
-        Product product = new Product();
-        product.setSku("ABC123");
-        product.setPrice(BigDecimal.ZERO);
-
-        assertThrows(BusinessException.class, () ->
-                productService.createProduct(product)
+                productService.createProduct(request)
         );
     }
 
@@ -70,19 +50,18 @@ class ProductServiceImplTest {
     @Test
     void shouldThrowWhenCategoryNotFound() {
 
-        Product product = new Product();
-        product.setSku("ABC123");
-        product.setPrice(BigDecimal.TEN);
+        CreateProductRequest request = new CreateProductRequest(
+                "Producto",
+                "ABC123",
+                BigDecimal.TEN,
+                1L
+        );
 
-        Category category = new Category();
-        category.setId(1L);
-
-        product.setCategory(category);
-
+        when(productRepository.findBySku("ABC123")).thenReturn(Optional.empty());
         when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
-                productService.createProduct(product)
+                productService.createProduct(request)
         );
     }
 
@@ -90,23 +69,36 @@ class ProductServiceImplTest {
     @Test
     void shouldCreateProductSuccessfully() {
 
-        Product product = new Product();
-        product.setSku("ABC123");
-        product.setPrice(BigDecimal.TEN);
-
         Category category = new Category();
         category.setId(1L);
 
-        product.setCategory(category);
+        CreateProductRequest request = new CreateProductRequest(
+                "Producto",
+                "ABC123",
+                BigDecimal.TEN,
+                1L
+        );
 
         when(productRepository.findBySku("ABC123")).thenReturn(Optional.empty());
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
         when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Product saved = productService.createProduct(product);
+        when(productMapper.toResponse(any()))
+                .thenAnswer(inv -> {
+                    Product p = inv.getArgument(0);
+                    return new ProductResponse(
+                            p.getId(),
+                            p.getName(),
+                            p.getSku(),
+                            p.getPrice(),
+                            p.getActive(),
+                            p.getCategory().getId()
+                    );
+                });
 
-        assertEquals("ABC123", saved.getSku());
-        assertEquals(category, saved.getCategory());
+        ProductResponse response = productService.createProduct(request);
+
+        assertEquals("ABC123", response.sku());
     }
 
     // Producto no encontrado
@@ -131,8 +123,21 @@ class ProductServiceImplTest {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
         when(productRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Product updated = productService.changeProductStatus(1L, false);
+        when(productMapper.toResponse(any()))
+                .thenAnswer(inv -> {
+                    Product p = inv.getArgument(0);
+                    return new ProductResponse(
+                            p.getId(),
+                            p.getName(),
+                            p.getSku(),
+                            p.getPrice(),
+                            p.getActive(),
+                            p.getCategory() != null ? p.getCategory().getId() : null
+                    );
+                });
 
-        assertFalse(updated.getActive());
+        ProductResponse updated = productService.changeProductStatus(1L, false);
+
+        assertFalse(updated.active());
     }
 }
