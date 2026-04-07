@@ -1,9 +1,10 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.AddressDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.Address;
 import com.example.unimagdalena.TiendaEcommerce.entities.Customer;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.IAddressMapper;
 import com.example.unimagdalena.TiendaEcommerce.repositories.AddressRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.CustomerRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,67 +20,58 @@ public class AddressServiceImpl implements AddressService {
 
     private final AddressRepository addressRepository;
     private final CustomerRepository customerRepository;
-
+    private final IAddressMapper addressMapper;
 
     @Override
-    public Address createAddress(Address address) {
+    public AddressResponse createAddress(CreateAddressRequest request) {
 
-        if (address.getCustomer() == null || address.getCustomer().getId() == null) {
-            throw new BusinessException("El cliente es obligatorio");
-        }
-
-        Customer customer = customerRepository.findById(address.getCustomer().getId())
+        Customer customer = customerRepository.findById(request.customerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        if (address.getStreet() == null || address.getStreet().isBlank()) {
-            throw new BusinessException("La dirección es obligatoria");
-        }
-
-        if (address.getCity() == null || address.getCity().isBlank()) {
-            throw new BusinessException("La ciudad es obligatoria");
-        }
+        Address address = addressMapper.toEntity(request);
 
         address.setCustomer(customer);
 
-        return addressRepository.save(address);
+        Address saved = addressRepository.save(address);
+
+        return addressMapper.toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Address getAddressById(Long id) {
-        return addressRepository.findById(id)
+    public AddressResponse getAddressById(Long id) {
+
+        Address address = addressRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada"));
-    }
 
+        return addressMapper.toResponse(address);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Address> getAddressesByCustomer(Long customerId) {
+    public List<AddressResponse> getAddressesByCustomer(Long customerId) {
 
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        return addressRepository.findByCustomer(customer);
+        return addressRepository.findByCustomer(customer)
+                .stream()
+                .map(addressMapper::toResponse)
+                .toList();
     }
 
-
     @Override
-    public Address updateAddress(Long id, Address updated) {
+    public AddressResponse updateAddress(Long id, UpdateAddressRequest request) {
 
         Address existing = addressRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada"));
 
-        if (updated.getStreet() != null && !updated.getStreet().isBlank()) {
-            existing.setStreet(updated.getStreet());
-        }
+        addressMapper.patch(existing, request);
 
-        if (updated.getCity() != null && !updated.getCity().isBlank()) {
-            existing.setCity(updated.getCity());
-        }
+        Address updated = addressRepository.save(existing);
 
-        return addressRepository.save(existing);
+        return addressMapper.toResponse(updated);
     }
-
 
     @Override
     public void deleteAddress(Long id) {

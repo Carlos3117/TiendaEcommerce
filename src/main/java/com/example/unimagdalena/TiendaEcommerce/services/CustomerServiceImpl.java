@@ -1,8 +1,10 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.CustomerDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.Customer;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.ICustomerMapper;
 import com.example.unimagdalena.TiendaEcommerce.repositories.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,75 +18,61 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final ICustomerMapper customerMapper;
 
     @Override
-    public Customer createCustomer(Customer customer) {
+    public CustomerResponse createCustomer(CreateCustomerRequest request) {
 
-        if (customer.getFirstName() == null || customer.getFirstName().isBlank()) {
-            throw new BusinessException("El nombre es obligatorio");
-        }
-
-        if (customer.getLastName() == null || customer.getLastName().isBlank()) {
-            throw new BusinessException("El apellido es obligatorio");
-        }
-
-        if (customer.getEmail() == null || customer.getEmail().isBlank()) {
-            throw new BusinessException("El email es obligatorio");
-        }
-
-        customerRepository.findByEmail(customer.getEmail())
+        customerRepository.findByEmail(request.email())
                 .ifPresent(c -> {
                     throw new BusinessException("El email ya está registrado");
                 });
 
-        return customerRepository.save(customer);
+        Customer customer = customerMapper.toEntity(request);
+
+        Customer saved = customerRepository.save(customer);
+
+        return customerMapper.toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Customer getCustomerById(Long id) {
+    public CustomerResponse getCustomerById(Long id) {
 
-        return customerRepository.findById(id)
+        Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
+
+        return customerMapper.toResponse(customer);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Customer> getAllCustomers() {
+    public List<CustomerResponse> getAllCustomers() {
 
-        return customerRepository.findAll();
+        return customerRepository.findAll()
+                .stream()
+                .map(customerMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public Customer updateCustomer(Long id, Customer customer) {
+    public CustomerResponse updateCustomer(Long id, UpdateCustomerRequest request) {
 
         Customer existing = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
-        if (customer.getFirstName() == null || customer.getFirstName().isBlank()) {
-            throw new BusinessException("El nombre es obligatorio");
-        }
-
-        if (customer.getLastName() == null || customer.getLastName().isBlank()) {
-            throw new BusinessException("El apellido es obligatorio");
-        }
-
-        if (customer.getEmail() == null || customer.getEmail().isBlank()) {
-            throw new BusinessException("El email es obligatorio");
-        }
-
-        customerRepository.findByEmail(customer.getEmail())
+        customerRepository.findByEmail(request.email())
                 .ifPresent(c -> {
                     if (!c.getId().equals(id)) {
                         throw new BusinessException("El email ya está en uso");
                     }
                 });
 
-        existing.setFirstName(customer.getFirstName());
-        existing.setLastName(customer.getLastName());
-        existing.setEmail(customer.getEmail());
+        customerMapper.patch(existing, request);
 
-        return customerRepository.save(existing);
+        Customer updated = customerRepository.save(existing);
+
+        return customerMapper.toResponse(updated);
     }
 
     @Override

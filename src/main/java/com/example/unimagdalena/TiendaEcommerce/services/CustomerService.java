@@ -1,18 +1,17 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Customer;
-
+import com.example.unimagdalena.TiendaEcommerce.dto.CustomerDto.*;
 import java.util.List;
 
 public interface CustomerService {
 
-    Customer createCustomer(Customer customer);
+    CustomerResponse createCustomer(CreateCustomerRequest request);
 
-    Customer getCustomerById(Long id);
+    CustomerResponse getCustomerById(Long id);
 
-    List<Customer> getAllCustomers();
+    List<CustomerResponse> getAllCustomers();
 
-    Customer updateCustomer(Long id, Customer customer);
+    CustomerResponse updateCustomer(Long id, UpdateCustomerRequest request);
 
     void deleteCustomer(Long id);
 }

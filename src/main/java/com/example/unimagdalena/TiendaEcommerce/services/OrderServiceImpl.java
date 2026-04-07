@@ -1,11 +1,11 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.OrderDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.*;
 import com.example.unimagdalena.TiendaEcommerce.enums.CustomerStatus;
 import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.ValidationException;
+import com.example.unimagdalena.TiendaEcommerce.exceptions.*;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.OrderMapper;
 import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,28 +28,16 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
 
     @Override
-    public Order createOrder(Long customerId, Long addressId, List<OrderItem> items) {
+    public OrderResponse createOrder(CreateOrderRequest request) {
 
-        if (customerId == null) {
-            throw new ValidationException("El cliente es obligatorio");
-        }
-
-        if (addressId == null) {
-            throw new ValidationException("La dirección es obligatoria");
-        }
-
-        if (items == null || items.isEmpty()) {
-            throw new BusinessException("El pedido debe contener al menos un ítem");
-        }
-
-        Customer customer = customerRepository.findById(customerId)
+        Customer customer = customerRepository.findById(request.customerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
         if (customer.getStatus() != CustomerStatus.ACTIVE) {
             throw new BusinessException("El cliente no está activo");
         }
 
-        Address address = addressRepository.findById(addressId)
+        Address address = addressRepository.findById(request.addressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Dirección no encontrada"));
 
         if (!address.getCustomer().getId().equals(customer.getId())) {
@@ -64,33 +52,22 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal total = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
 
-        for (OrderItem item : items) {
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new ValidationException("Cantidad inválida");
-            }
+        for (CreateOrderItemRequest item : request.items()) {
 
-            if (item.getProduct() == null || item.getProduct().getId() == null) {
-                throw new ValidationException("El producto es obligatorio");
-            }
-
-            Product product = productRepository.findById(item.getProduct().getId())
+            Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
             if (!product.getActive()) {
                 throw new BusinessException("Producto inactivo: " + product.getName());
             }
 
-            if (product.getPrice() == null || product.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new BusinessException("Producto con precio inválido: " + product.getName());
-            }
-
             BigDecimal unitPrice = product.getPrice();
-            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.quantity()));
 
             OrderItem newItem = new OrderItem();
             newItem.setOrder(order);
             newItem.setProduct(product);
-            newItem.setQuantity(item.getQuantity());
+            newItem.setQuantity(item.quantity());
             newItem.setUnitPrice(unitPrice);
             newItem.setSubtotal(subtotal);
 
@@ -101,27 +78,27 @@ public class OrderServiceImpl implements OrderService {
         order.setItems(orderItems);
         order.setTotal(total);
 
-        Order savedOrder = orderRepository.save(order);
+        Order saved = orderRepository.save(order);
 
-        saveHistory(savedOrder, OrderStatus.CREATED);
+        saveHistory(saved, OrderStatus.CREATED);
 
-        return savedOrder;
+        return OrderMapper.toResponse(saved);
     }
-
 
     @Override
     @Transactional(readOnly = true)
-    public Order getOrderById(Long id) {
-        return getOrderOrThrow(id);
+    public OrderResponse getOrderById(Long id) {
+        return OrderMapper.toResponse(getOrderOrThrow(id));
     }
-
 
     @Override
     @Transactional(readOnly = true)
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    public List<OrderResponse> getAllOrders() {
+        return orderRepository.findAll()
+                .stream()
+                .map(OrderMapper::toResponse)
+                .toList();
     }
-
 
     @Override
     public void payOrder(Long orderId) {
@@ -132,35 +109,12 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Solo pedidos en estado CREATED pueden pagarse");
         }
 
-        if (order.getItems() == null || order.getItems().isEmpty()) {
-            throw new BusinessException("El pedido no tiene ítems");
-        }
-
-
         for (OrderItem item : order.getItems()) {
-
-            if (item.getProduct() == null) {
-                throw new BusinessException("Ítem sin producto asociado");
-            }
-
-            if (!item.getProduct().getActive()) {
-                throw new BusinessException("Producto inactivo: " + item.getProduct().getName());
-            }
 
             Inventory inventory = item.getProduct().getInventory();
 
-            if (inventory == null) {
-                throw new BusinessException("Producto sin inventario asociado");
-            }
-
-            if (item.getQuantity() == null || item.getQuantity() <= 0) {
-                throw new BusinessException("Cantidad inválida en ítems");
-            }
-
-            if (inventory.getStock() < item.getQuantity()) {
-                throw new BusinessException(
-                        "Stock insuficiente para el producto: " + item.getProduct().getName()
-                );
+            if (inventory == null || inventory.getStock() < item.getQuantity()) {
+                throw new BusinessException("Stock insuficiente");
             }
         }
 
@@ -170,30 +124,11 @@ public class OrderServiceImpl implements OrderService {
             inventoryRepository.save(inventory);
         }
 
-
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (OrderItem item : order.getItems()) {
-
-            BigDecimal unitPrice = item.getProduct().getPrice();
-            item.setUnitPrice(unitPrice);
-
-            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
-            item.setSubtotal(subtotal);
-
-            total = total.add(subtotal);
-        }
-
-        order.setTotal(total);
-
-
         order.setStatus(OrderStatus.PAID);
-
         orderRepository.save(order);
 
         saveHistory(order, OrderStatus.PAID);
     }
-
 
     @Override
     public void shipOrder(Long orderId) {
@@ -201,7 +136,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = getOrderOrThrow(orderId);
 
         if (order.getStatus() != OrderStatus.PAID) {
-            throw new BusinessException("Solo pedidos en estado PAID pueden enviarse");
+            throw new BusinessException("Solo pedidos pagados pueden enviarse");
         }
 
         order.setStatus(OrderStatus.SHIPPED);
@@ -216,7 +151,7 @@ public class OrderServiceImpl implements OrderService {
         Order order = getOrderOrThrow(orderId);
 
         if (order.getStatus() != OrderStatus.SHIPPED) {
-            throw new BusinessException("Solo pedidos enviados pueden marcarse como entregados");
+            throw new BusinessException("Solo pedidos enviados pueden entregarse");
         }
 
         order.setStatus(OrderStatus.DELIVERED);
@@ -224,7 +159,6 @@ public class OrderServiceImpl implements OrderService {
 
         saveHistory(order, OrderStatus.DELIVERED);
     }
-
 
     @Override
     public void cancelOrder(Long orderId) {
@@ -238,41 +172,30 @@ public class OrderServiceImpl implements OrderService {
                 break;
 
             case PAID:
-
                 for (OrderItem item : order.getItems()) {
-
-                    if (item.getProduct() == null || item.getProduct().getInventory() == null) {
-                        throw new BusinessException("Producto sin inventario asociado");
-                    }
                     Inventory inventory = item.getProduct().getInventory();
                     inventory.setStock(inventory.getStock() + item.getQuantity());
                     inventoryRepository.save(inventory);
                 }
-
                 order.setStatus(OrderStatus.CANCELLED);
                 break;
 
             case SHIPPED:
-                throw new BusinessException("No se puede cancelar un pedido ya enviado");
-
             case DELIVERED:
-                throw new BusinessException("No se puede cancelar un pedido entregado");
+                throw new BusinessException("No se puede cancelar este pedido");
 
             case CANCELLED:
                 throw new BusinessException("El pedido ya está cancelado");
         }
 
         orderRepository.save(order);
-
         saveHistory(order, OrderStatus.CANCELLED);
     }
 
-
-    private Order getOrderOrThrow(Long orderId) {
-        return orderRepository.findById(orderId)
+    private Order getOrderOrThrow(Long id) {
+        return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido no encontrado"));
     }
-
 
     private void saveHistory(Order order, OrderStatus status) {
         OrderStatusHistory history = new OrderStatusHistory();

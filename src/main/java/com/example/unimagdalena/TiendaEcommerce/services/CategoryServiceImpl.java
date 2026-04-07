@@ -1,9 +1,11 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.CategoryDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.Category;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ConflictException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.ICategoryMapper;
 import com.example.unimagdalena.TiendaEcommerce.repositories.CategoryRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,67 +21,71 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
-
+    private final ICategoryMapper categoryMapper;
 
     @Override
-    public Category createCategory(Category category) {
+    public CategoryResponse createCategory(CreateCategoryRequest request) {
 
-        if (category.getName() == null || category.getName().isBlank()) {
-            throw new BusinessException("El nombre de la categoría es obligatorio");
-        }
-
-        categoryRepository.findByName(category.getName())
+        // Regla de negocio
+        categoryRepository.findByName(request.name())
                 .ifPresent(c -> {
                     throw new ConflictException("La categoría ya existe");
                 });
 
-        return categoryRepository.save(category);
-    }
+        Category category = categoryMapper.toEntity(request);
 
+        Category saved = categoryRepository.save(category);
+
+        return categoryMapper.toResponse(saved);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public Category getCategoryById(Long id) {
-        return categoryRepository.findById(id)
+    public CategoryResponse getCategoryById(Long id) {
+
+        Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
-    }
 
+        return categoryMapper.toResponse(category);
+    }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Category> getAllCategories() {
-        return categoryRepository.findAll();
+    public List<CategoryResponse> getAllCategories() {
+
+        return categoryRepository.findAll()
+                .stream()
+                .map(categoryMapper::toResponse)
+                .toList();
     }
 
-
     @Override
-    public Category updateCategory(Long id, Category updated) {
+    public CategoryResponse updateCategory(Long id, UpdateCategoryRequest request) {
 
         Category existing = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
 
-        if (updated.getName() != null && !updated.getName().isBlank()) {
-
-            categoryRepository.findByName(updated.getName())
+        if (request.name() != null) {
+            categoryRepository.findByName(request.name())
                     .ifPresent(c -> {
                         if (!c.getId().equals(id)) {
                             throw new ConflictException("Ya existe una categoría con ese nombre");
                         }
                     });
-
-            existing.setName(updated.getName());
         }
 
-        return categoryRepository.save(existing);
-    }
+        categoryMapper.patch(existing, request);
 
+        Category updated = categoryRepository.save(existing);
+
+        return categoryMapper.toResponse(updated);
+    }
 
     @Override
     public void deleteCategory(Long id) {
 
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Categoría no encontrada"));
-
 
         if (!productRepository.findByCategoryAndActiveTrue(category).isEmpty()) {
             throw new BusinessException("No se puede eliminar una categoría con productos asociados");

@@ -12,4 +12,7 @@ public interface ICategoryMapper {
     Category toEntity(CreateCategoryRequest req);
 
     CategoryResponse toResponse(Category entity);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void patch(@MappingTarget Category target, UpdateCategoryRequest changes);
 }

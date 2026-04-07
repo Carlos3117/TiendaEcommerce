@@ -1,17 +1,16 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Order;
-import com.example.unimagdalena.TiendaEcommerce.entities.OrderItem;
+import com.example.unimagdalena.TiendaEcommerce.dto.OrderDto.*;
 
 import java.util.List;
 
 public interface OrderService {
 
-    Order createOrder(Long customerId, Long addressId, List<OrderItem> items);
+    OrderResponse createOrder(CreateOrderRequest request);
 
-    Order getOrderById(Long id);
+    OrderResponse getOrderById(Long id);
 
-    List<Order> getAllOrders();
+    List<OrderResponse> getAllOrders();
 
     void payOrder(Long orderId);
 

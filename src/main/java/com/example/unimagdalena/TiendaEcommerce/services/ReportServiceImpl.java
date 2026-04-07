@@ -1,18 +1,15 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Customer;
-import com.example.unimagdalena.TiendaEcommerce.entities.Order;
-import com.example.unimagdalena.TiendaEcommerce.entities.Product;
+import com.example.unimagdalena.TiendaEcommerce.dto.OrderDto.OrderResponse;
+import com.example.unimagdalena.TiendaEcommerce.dto.ReportDto.*;
+import com.example.unimagdalena.TiendaEcommerce.entities.*;
 import com.example.unimagdalena.TiendaEcommerce.enums.OrderStatus;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
-import com.example.unimagdalena.TiendaEcommerce.repositories.CustomerRepository;
-import com.example.unimagdalena.TiendaEcommerce.repositories.InventoryRepository;
-import com.example.unimagdalena.TiendaEcommerce.repositories.OrderItemRepository;
-import com.example.unimagdalena.TiendaEcommerce.repositories.OrderRepository;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.OrderMapper;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.ReportMapper;
+import com.example.unimagdalena.TiendaEcommerce.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -20,7 +17,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class ReportServiceImpl implements ReportService {
 
     private final InventoryRepository inventoryRepository;
@@ -28,17 +24,25 @@ public class ReportServiceImpl implements ReportService {
     private final OrderItemRepository orderItemRepository;
 
     @Override
-    public List<Product> getLowStockProducts() {
-        return inventoryRepository.findProductsWithInsufficientStock();
+    public List<LowStockProductResponse> getLowStockProducts() {
+
+        return inventoryRepository.findLowStockProducts()
+                .stream()
+                .map(inv -> ReportMapper.toLowStock(
+                        inv.getProduct(),
+                        inv.getStock(),
+                        inv.getMinStock()
+                ))
+                .toList();
     }
 
     @Override
-    public List<Order> getOrdersByFilters(Long customerId,
-                                          String status,
-                                          LocalDateTime startDate,
-                                          LocalDateTime endDate,
-                                          BigDecimal minTotal,
-                                          BigDecimal maxTotal) {
+    public List<OrderResponse> getOrdersByFilters(Long customerId,
+                                                  String status,
+                                                  LocalDateTime startDate,
+                                                  LocalDateTime endDate,
+                                                  BigDecimal minTotal,
+                                                  BigDecimal maxTotal) {
 
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new BusinessException("La fecha inicial no puede ser mayor que la final");
@@ -49,6 +53,7 @@ public class ReportServiceImpl implements ReportService {
         }
 
         OrderStatus orderStatus = null;
+
         if (status != null && !status.isBlank()) {
             try {
                 orderStatus = OrderStatus.valueOf(status.toUpperCase());
@@ -58,33 +63,57 @@ public class ReportServiceImpl implements ReportService {
         }
 
         return orderRepository.findOrdersWithFilters(
-                customerId,
-                orderStatus,
-                startDate,
-                endDate,
-                minTotal,
-                maxTotal
-        );
+                        customerId,
+                        orderStatus,
+                        startDate,
+                        endDate,
+                        minTotal,
+                        maxTotal
+                )
+                .stream()
+                .map(OrderMapper::toResponse)
+                .toList();
     }
 
     @Override
-    public List<Object[]> getTopSellingProducts(LocalDateTime startDate,
-                                                LocalDateTime endDate) {
+    public List<BestSellingProductResponse> getTopSellingProducts(LocalDateTime startDate,
+                                                                  LocalDateTime endDate) {
 
         if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
             throw new BusinessException("Rango de fechas inválido");
         }
 
-        return orderItemRepository.findBestSellingProductsForRange(startDate, endDate);
+        return orderItemRepository.findBestSellingProductsForRange(startDate, endDate)
+                .stream()
+                .map(obj -> ReportMapper.toBestSelling(
+                        (Product) obj[0],
+                        (Long) obj[1]
+                ))
+                .toList();
     }
 
     @Override
-    public List<Object[]> getMonthlyIncome() {
-        return orderRepository.getMonthlyIncome();
+    public List<MonthlyIncomeResponse> getMonthlyIncome() {
+
+        return orderRepository.getMonthlyIncome()
+                .stream()
+                .map(obj -> ReportMapper.toMonthly(
+                        (Integer) obj[0],
+                        (Integer) obj[1],
+                        (BigDecimal) obj[2]
+                ))
+                .toList();
     }
 
     @Override
-    public List<Object[]> getTopCustomers() {
-        return orderRepository.findTopSpendingCustomers();
+    public List<TopCustomerResponse> getTopCustomers() {
+
+        return orderRepository.findTopSpendingCustomers()
+                .stream()
+                .map(obj -> ReportMapper.toTopCustomer(
+                        (Customer) obj[0],
+                        (BigDecimal) obj[1]
+                ))
+                .toList();
     }
 }

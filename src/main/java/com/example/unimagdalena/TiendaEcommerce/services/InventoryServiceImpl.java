@@ -1,9 +1,11 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
+import com.example.unimagdalena.TiendaEcommerce.dto.InventoryDto.*;
 import com.example.unimagdalena.TiendaEcommerce.entities.Inventory;
 import com.example.unimagdalena.TiendaEcommerce.entities.Product;
-import com.example.unimagdalena.TiendaEcommerce.exceptions.BusinessException;
 import com.example.unimagdalena.TiendaEcommerce.exceptions.ResourceNotFoundException;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.IInventoryMapper ;
+import com.example.unimagdalena.TiendaEcommerce.services.mapper.InventoryMapper ;
 import com.example.unimagdalena.TiendaEcommerce.repositories.InventoryRepository;
 import com.example.unimagdalena.TiendaEcommerce.repositories.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,43 +21,32 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final InventoryRepository inventoryRepository;
     private final ProductRepository productRepository;
-
+    private final IInventoryMapper inventoryMapper;
 
     @Override
-    public Inventory updateInventory(Long productId, Integer stock, Integer minStock) {
+    public InventoryResponse updateInventory(UpdateInventoryRequest request) {
 
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findById(request.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
-        if (stock == null || stock < 0) {
-            throw new BusinessException("El stock no puede ser negativo");
-        }
-
-        if (minStock == null || minStock < 0) {
-            throw new BusinessException("El stock mínimo no puede ser negativo");
-        }
-
         Inventory inventory = product.getInventory();
-
 
         if (inventory == null) {
             inventory = new Inventory();
             inventory.setProduct(product);
-
-
             product.setInventory(inventory);
         }
 
-        inventory.setStock(stock);
-        inventory.setMinStock(minStock);
+        InventoryMapper.update(inventory, request);
 
-        return inventoryRepository.save(inventory);
+        Inventory saved = inventoryRepository.save(inventory);
+
+        return inventoryMapper.toResponse(saved);
     }
-
 
     @Override
     @Transactional(readOnly = true)
-    public Inventory getByProduct(Long productId) {
+    public InventoryResponse getByProduct(Long productId) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
@@ -66,15 +57,16 @@ public class InventoryServiceImpl implements InventoryService {
             throw new ResourceNotFoundException("El producto no tiene inventario");
         }
 
-        return inventory;
+        return inventoryMapper.toResponse(inventory);
     }
-
 
     @Override
     @Transactional(readOnly = true)
-    public List<Inventory> getLowStockProducts() {
+    public List<InventoryResponse> getLowStockProducts() {
 
-
-        return inventoryRepository.findLowStockProducts();
+        return inventoryRepository.findLowStockProducts()
+                .stream()
+                .map(inventoryMapper::toResponse)
+                .toList();
     }
 }

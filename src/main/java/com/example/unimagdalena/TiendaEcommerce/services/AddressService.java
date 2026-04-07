@@ -1,18 +1,18 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Address;
+import com.example.unimagdalena.TiendaEcommerce.dto.AddressDto.*;
 
 import java.util.List;
 
 public interface AddressService {
 
-    Address createAddress(Address address);
+    AddressResponse createAddress(CreateAddressRequest request);
 
-    Address getAddressById(Long id);
+    AddressResponse getAddressById(Long id);
 
-    List<Address> getAddressesByCustomer(Long customerId);
+    List<AddressResponse> getAddressesByCustomer(Long customerId);
 
-    Address updateAddress(Long id, Address address);
+    AddressResponse updateAddress(Long id, UpdateAddressRequest request);
 
     void deleteAddress(Long id);
 }

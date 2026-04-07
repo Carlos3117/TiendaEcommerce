@@ -1,18 +1,18 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Category;
+import com.example.unimagdalena.TiendaEcommerce.dto.CategoryDto.*;
 
 import java.util.List;
 
 public interface CategoryService {
 
-    Category createCategory(Category category);
+    CategoryResponse createCategory(CreateCategoryRequest request);
 
-    Category getCategoryById(Long id);
+    CategoryResponse getCategoryById(Long id);
 
-    List<Category> getAllCategories();
+    List<CategoryResponse> getAllCategories();
 
-    Category updateCategory(Long id, Category category);
+    CategoryResponse updateCategory(Long id, UpdateCategoryRequest request);
 
     void deleteCategory(Long id);
 }

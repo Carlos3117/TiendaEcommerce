@@ -1,17 +1,14 @@
 package com.example.unimagdalena.TiendaEcommerce.services;
 
-import com.example.unimagdalena.TiendaEcommerce.entities.Inventory;
+import com.example.unimagdalena.TiendaEcommerce.dto.InventoryDto.*;
 
 import java.util.List;
 
 public interface InventoryService {
 
+    InventoryResponse updateInventory(UpdateInventoryRequest request);
 
-    Inventory updateInventory(Long productId, Integer stock, Integer minStock);
+    InventoryResponse getByProduct(Long productId);
 
-
-    Inventory getByProduct(Long productId);
-
-
-    List<Inventory> getLowStockProducts();
+    List<InventoryResponse> getLowStockProducts();
 }
