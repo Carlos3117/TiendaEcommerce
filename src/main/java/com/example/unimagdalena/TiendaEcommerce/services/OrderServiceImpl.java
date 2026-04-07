@@ -30,6 +30,10 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse createOrder(CreateOrderRequest request) {
 
+        if (request.items() == null || request.items().isEmpty()) {
+            throw new BusinessException("El pedido debe tener al menos un item");
+        }
+
         Customer customer = customerRepository.findById(request.customerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado"));
 
