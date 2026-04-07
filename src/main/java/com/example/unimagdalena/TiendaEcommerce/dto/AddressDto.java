@@ -18,6 +18,14 @@ public class AddressDto {
 
     ) implements Serializable {}
 
+    public record UpdateAddressRequest(
+
+            String street,
+            String city
+
+    ) implements Serializable {}
+
+
     public record AddressResponse(
             Long id,
             String street,
