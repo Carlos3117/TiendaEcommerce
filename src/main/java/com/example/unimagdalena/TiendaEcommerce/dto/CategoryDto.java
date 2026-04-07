@@ -12,6 +12,10 @@ public class CategoryDto {
 
     ) implements Serializable {}
 
+    public record UpdateCategoryRequest(
+            String name
+    ) implements Serializable {}
+
     public record CategoryResponse(
             Long id,
             String name
