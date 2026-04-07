@@ -13,4 +13,7 @@ public interface IAddressMapper {
 
     @Mapping(target = "customerId", source = "customer.id")
     AddressResponse toResponse(Address entity);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void patch(@MappingTarget Address target, UpdateAddressRequest changes);
 }
