@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.List;
 
@@ -51,8 +52,10 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
-                                                                 HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex,
+            HttpServletRequest request
+    ) {
         List<ApiError.FieldViolation> violations = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -70,14 +73,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiError> handleConstraintViolation(ConstraintViolationException ex,
-                                                              HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleConstraintViolation(
+            ConstraintViolationException ex,
+            HttpServletRequest request
+    ) {
         List<ApiError.FieldViolation> violations = ex.getConstraintViolations()
                 .stream()
-                .map(violation -> new ApiError.FieldViolation(
-                        violation.getPropertyPath().toString(),
-                        violation.getMessage()
-                ))
+                .map(v -> new ApiError.FieldViolation(v.getPropertyPath().toString(), v.getMessage()))
                 .toList();
 
         ApiError body = ApiError.of(
@@ -87,6 +89,20 @@ public class GlobalExceptionHandler {
                 violations
         );
 
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        ApiError body = ApiError.of(
+                HttpStatus.BAD_REQUEST,
+                "Malformed JSON request",
+                request.getRequestURI(),
+                List.of()
+        );
         return ResponseEntity.badRequest().body(body);
     }
 
