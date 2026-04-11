@@ -181,6 +181,7 @@ public class OrderServiceImpl implements OrderService {
                 break;
 
             case SHIPPED:
+                throw new BusinessException("No se puede cancelar un pedido que ya fue enviado");
             case DELIVERED:
                 throw new BusinessException("No se puede cancelar este pedido");
 
