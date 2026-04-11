@@ -1,4 +1,4 @@
-package com.example.unimagdalena.TiendaEcommerce.api;
+package com.example.unimagdalena.TiendaEcommerce.controllers;
 
 import com.example.unimagdalena.TiendaEcommerce.dto.OrderDto.OrderResponse;
 import com.example.unimagdalena.TiendaEcommerce.dto.ReportDto.BestSellingProductResponse;

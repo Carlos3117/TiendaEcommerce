@@ -1,4 +1,4 @@
-package com.example.unimagdalena.TiendaEcommerce.api;
+package com.example.unimagdalena.TiendaEcommerce.controllers;
 
 import com.example.unimagdalena.TiendaEcommerce.dto.AddressDto.AddressResponse;
 import com.example.unimagdalena.TiendaEcommerce.dto.AddressDto.CreateAddressRequest;

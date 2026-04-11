@@ -1,4 +1,4 @@
-package com.example.unimagdalena.TiendaEcommerce.api;
+package com.example.unimagdalena.TiendaEcommerce.controllers;
 
 import com.example.unimagdalena.TiendaEcommerce.dto.CategoryDto.CategoryResponse;
 import com.example.unimagdalena.TiendaEcommerce.dto.CategoryDto.CreateCategoryRequest;
