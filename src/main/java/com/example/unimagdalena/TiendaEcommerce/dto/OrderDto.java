@@ -1,5 +1,6 @@
 package com.example.unimagdalena.TiendaEcommerce.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -28,7 +29,7 @@ public class OrderDto {
             Long addressId,
 
             @NotEmpty(message = "El pedido debe tener al menos un ítem")
-            List<CreateOrderItemRequest> items
+            List<@Valid CreateOrderItemRequest> items
 
     ) implements Serializable {}
 
