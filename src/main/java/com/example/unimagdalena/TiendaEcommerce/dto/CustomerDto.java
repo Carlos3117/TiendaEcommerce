@@ -1,4 +1,3 @@
-
 package com.example.unimagdalena.TiendaEcommerce.dto;
 
 import jakarta.validation.constraints.Email;
@@ -30,15 +29,21 @@ public class CustomerDto {
 
     public record UpdateCustomerRequest(
 
-            @NotBlank
+            @NotBlank(message = "El nombre es obligatorio")
+            @Size(max = 100)
             String firstName,
 
-            @NotBlank
+            @NotBlank(message = "El apellido es obligatorio")
+            @Size(max = 100)
             String lastName,
 
-            @NotBlank
-            @Email
-            String email
+            @NotBlank(message = "El email es obligatorio")
+            @Email(message = "Formato de email inválido")
+            String email,
+
+            @NotBlank(message = "El teléfono es obligatorio")
+            @Size(max = 20)
+            String phoneNumber
 
     ) implements Serializable {}
 
