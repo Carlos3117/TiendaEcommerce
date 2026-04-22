@@ -1,0 +1,47 @@
+###
+### REGISTER
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "1234"
+}
+
+###
+### LOGIN
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "1234"
+}
+
+###
+### PROTECTED TEST
+GET http://localhost:8080/api/products
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc3NjU3MTUzNCwiZXhwIjoxNzc2NTc1MTM0fQ.G7lR1KeR5ig60oGvefCPz40LsP_cLfU82z4iDkk2cxI
+
+###
+### SIN TOKEN
+GET http://localhost:8080/api/products
+
+###
+### CON TOKEN
+GET http://localhost:8080/api/products
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc3NjU3MTUzNCwiZXhwIjoxNzc2NTc1MTM0fQ.G7lR1KeR5ig60oGvefCPz40LsP_cLfU82z4iDkk2cxI
+
+###
+### ADMIN LOGIN
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "1234"
+}
+###
+### REPORTS WITH USER TOKEN
+GET http://localhost:8080/api/reports/low-stock-products
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdEB0ZXN0LmNvbSIsImlhdCI6MTc3NjU3MTUzNCwiZXhwIjoxNzc2NTc1MTM0fQ.G7lR1KeR5ig60oGvefCPz40LsP_cLfU82z4iDkk2cxI
